@@ -116,6 +116,11 @@ select.tab.ghost option{color:var(--ink)}
 .sumline .s-val{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
 .sumline .s-val.grn{color:var(--tealdk)}
 
+/* ---- disclosures footer ---- */
+.sitefoot{margin-top:26px;padding:16px 2px 0;border-top:1px solid var(--line)}
+.sitefoot p{font-size:10.5px;line-height:1.55;color:var(--mut)}
+.sitefoot a{color:var(--mut)}
+
 /* ---- print ---- */
 @media print{
   body{background:#fff}
