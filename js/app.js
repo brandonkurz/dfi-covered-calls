@@ -11,6 +11,9 @@ const STRATS = [
   { key: 'conservative', label: 'Conservative', batches: [{ pct: 15, prob: 20 }, { pct: 30, prob: 15 }, { pct: 55, prob: 10 }] },
 ];
 const LS_KEY = 'dfi-cc-clients';
+/* On GitHub Pages there is no proxy; read JSON snapshots committed by the
+   update-data GitHub Action instead. */
+const STATIC_MODE = !/^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(location.hostname);
 
 const state = {
   quote: null,            // { price, prevClose, name, time }
@@ -104,28 +107,55 @@ function pickExpiration(exps, earnTs) {
   return best;
 }
 
+async function loadStatic(sym) {
+  const r = await fetch('data/' + encodeURIComponent(sym) + '.json?t=' + Date.now());
+  if (!r.ok) {
+    let list = '';
+    try { list = ' Current watchlist: ' + (await (await fetch('tickers.json?t=' + Date.now())).json()).join(', ') + '.'; } catch (_) {}
+    throw new Error(sym + ' is not in the hosted watchlist. Edit tickers.json in the GitHub repo to add it.' + list);
+  }
+  return r.json();
+}
+
+function applyStatic(d) {
+  state.quote = d.quote; state.earningsTs = d.earnTs; state.divYield = d.divYield || 0;
+  state.expirations = Object.keys(d.chains).map(Number).sort((a, b) => a - b);
+  if (!state.expirations.length) throw new Error(d.symbol + ' has no cached option chains yet.');
+  if (!state.selectedExp || !state.expirations.includes(state.selectedExp)) {
+    state.selectedExp = pickExpiration(state.expirations, d.earnTs);
+  }
+  state.calls = d.chains[state.selectedExp];
+  state.quoteAtLoad = d.quote.price;
+  $('stamp').textContent = 'Data as of ' + new Date(d.fetchedAt).toLocaleString() +
+    ' (auto-updates ~15 min during market hours)';
+}
+
 async function loadAll() {
   const sym = $('symbol').value.trim().toUpperCase();
   if (!sym) return;
   $('symbol').value = sym;
   state.loading = true; $('loadBtn').disabled = true; showErr(null);
   try {
-    const [quote, meta, chain0] = await Promise.all([fetchQuote(sym), fetchEarnings(sym), fetchChain(sym)]);
-    const earnTs = meta.earnTs;
-    state.quote = quote; state.earningsTs = earnTs; state.divYield = meta.divYield;
-    state.expirations = chain0.expirations;
-    if (!state.expirations.length) throw new Error(sym + ' has no listed options.');
-    if (!state.selectedExp || !state.expirations.includes(state.selectedExp)) {
-      state.selectedExp = pickExpiration(state.expirations, earnTs);
+    if (STATIC_MODE) {
+      applyStatic(await loadStatic(sym));
+    } else {
+      const [quote, meta, chain0] = await Promise.all([fetchQuote(sym), fetchEarnings(sym), fetchChain(sym)]);
+      const earnTs = meta.earnTs;
+      state.quote = quote; state.earningsTs = earnTs; state.divYield = meta.divYield;
+      state.expirations = chain0.expirations;
+      if (!state.expirations.length) throw new Error(sym + ' has no listed options.');
+      if (!state.selectedExp || !state.expirations.includes(state.selectedExp)) {
+        state.selectedExp = pickExpiration(state.expirations, earnTs);
+      }
+      const chain = state.selectedExp === chain0.expirations[0] && chain0.calls.length
+        ? chain0 : await fetchChain(sym, state.selectedExp);
+      state.calls = chain.calls;
+      state.quoteAtLoad = quote.price;
+      $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
     }
-    const chain = state.selectedExp === chain0.expirations[0] && chain0.calls.length
-      ? chain0 : await fetchChain(sym, state.selectedExp);
-    state.calls = chain.calls;
-    state.quoteAtLoad = quote.price;
     buildLadder(); renderAll();
-    $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
   } catch (e) {
-    showErr('Could not load live data: ' + e.message);
+    showErr('Could not load data: ' + e.message);
   } finally {
     state.loading = false; $('loadBtn').disabled = false;
   }
@@ -138,10 +168,14 @@ async function refresh() {
   if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'SELECT') && $('strategies').contains(ae)) return;
   const sym = $('symbol').value.trim().toUpperCase();
   try {
-    const [quote, chain] = await Promise.all([fetchQuote(sym), fetchChain(sym, state.selectedExp)]);
-    state.quote = quote; state.calls = chain.calls; state.quoteAtLoad = quote.price;
+    if (STATIC_MODE) {
+      applyStatic(await loadStatic(sym));
+    } else {
+      const [quote, chain] = await Promise.all([fetchQuote(sym), fetchChain(sym, state.selectedExp)]);
+      state.quote = quote; state.calls = chain.calls; state.quoteAtLoad = quote.price;
+      $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    }
     buildLadder(); renderAll();
-    $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
     showErr(null);
   } catch (e) { showErr('Refresh failed: ' + e.message); }
 }

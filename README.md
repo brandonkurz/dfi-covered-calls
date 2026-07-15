@@ -4,7 +4,17 @@ Self-updating version of the covered call analysis sheet, with DiversiFi Capital
 Replaces the manual Barchart workflow: type a ticker, and the app pulls live data and
 rebuilds the Aggressive / Moderate / Conservative tables automatically.
 
-## Run it
+## Use it
+
+**Hosted (GitHub Pages):** https://brandonkurz.github.io/dfi-covered-calls/
+
+The hosted version reads data snapshots that a GitHub Action refreshes about every
+15 minutes during US market hours (plus GitHub Pages CDN caching, so expect quotes
+to lag by up to ~25 minutes). It covers the tickers in [tickers.json](tickers.json);
+to add one, edit that file on GitHub and either wait for the next scheduled run or
+trigger the "Update market data" workflow manually from the Actions tab.
+
+**Local (freshest data, any ticker):**
 
 - Double-click `start.command` (starts the local server and opens the browser), or
 - `node server.js` then open http://127.0.0.1:8771
