@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DiversiFi Capital | Covered Call Analyzer</title>
+<link rel="icon" href="assets/dfi_logo.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap topbar">
+    <div class="wordmark">
+      <img class="logo" src="assets/dfi_logo.png" alt="DiversiFi Capital">
+      <div class="name">DiversiFi Capital<small>Covered Call Analyzer</small></div>
+    </div>
+    <div class="top-actions">
+      <select id="clientList" class="tab ghost" title="Load a saved client"><option value="">Saved clients...</option></select>
+      <button id="saveClient" class="tab ghost">Save client</button>
+      <button id="printBtn" class="tab ghost">Print / PDF</button>
+    </div>
+  </div>
+  <div class="wrap inputrow">
+    <div class="infld"><label>Client name</label><input type="text" id="clientName" placeholder="Client name"></div>
+    <div class="infld sm"><label>Ticker</label><input type="text" id="symbol" value="GOOGL" autocapitalize="characters"></div>
+    <div class="infld sm"><label>No. of shares</label><input type="number" id="shares" value="6000" min="100" step="100"></div>
+    <div class="infld sm"><label>Fee / contract</label><input type="number" id="fee" value="0.65" min="0" step="0.05"></div>
+    <button id="loadBtn" class="gobtn">Load live data</button>
+  </div>
+</header>
+
+<div class="kpibar">
+  <div class="wrap kpirow">
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="k-lab">Current price</div><div class="k-val" id="kPrice">-</div><div class="k-sub" id="kChange">-</div></div>
+      <div class="kpi"><div class="k-lab">Position value</div><div class="k-val" id="kPos">-</div><div class="k-sub" id="kShares">-</div></div>
+      <div class="kpi"><div class="k-lab">Next earnings</div><div class="k-val" id="kEarn">-</div><div class="k-sub" id="kEarnSub">&nbsp;</div></div>
+      <div class="kpi"><div class="k-lab">Expiration</div><div class="k-val"><select id="expSelect" class="expsel"></select></div><div class="k-sub" id="kExpSub">-</div></div>
+    </div>
+    <div class="liveblock">
+      <span id="thruEarn" class="badge warn hidden">Writes thru earnings</span>
+      <span id="stamp" class="stamp">Not loaded</span>
+      <button id="refreshBtn" class="mini" title="Refresh now">&#8635; Refresh</button>
+      <label class="mini toggle"><input type="checkbox" id="autoRef" checked> Auto 60s</label>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div id="err" class="errbox hidden"></div>
+
+  <div class="grid2">
+    <section class="panel">
+      <div class="panel-h">Strike ladder <span class="mut nrm">- strikes auto-matched to call probability (delta), premium = bid</span>
+        <a id="bcLink" class="plink hidden" href="#" target="_blank" rel="noopener">Verify on Barchart &#8599;</a></div>
+      <div class="pad scrollx"><table class="tbl ladder" id="ladderTbl">
+        <thead><tr><th>Call probability</th><th>Strike price</th><th>Premium (bid)</th><th>Actual delta</th><th>Impl. vol</th><th>Open int.</th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+    </section>
+    <section class="panel">
+      <div class="panel-h">Methodology &amp; assumptions</div>
+      <div class="pad meth">
+        <p>Strikes are selected from the live option chain by matching each target call probability to the contract whose Black-Scholes delta is closest. Implied volatility is derived from each contract's bid/ask midpoint, the same methodology Barchart uses for its delta column, so figures should track the Barchart page closely. Premiums use the live <b>bid</b>.</p>
+        <p>The expiration defaults to the closest available date <b>prior to next earnings</b>. Selecting a later date shows a "writes thru earnings" warning, which we try to avoid.</p>
+        <div class="assump">
+          <span>Risk-free rate <input type="number" id="rf" value="4.3" step="0.1" min="0"> %</span>
+          <span id="ivNote" class="mut"></span>
+        </div>
+        <p class="note">Delayed data via Yahoo Finance. For advisor use only - not investment advice or an offer to transact. Verify strikes, premiums and expirations against the broker platform before execution.</p>
+      </div>
+    </section>
+  </div>
+
+  <div id="strategies"></div>
+</main>
+
+<script src="js/app.js"></script>
+</body>
+</html>
