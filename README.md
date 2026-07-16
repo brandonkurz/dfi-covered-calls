@@ -9,10 +9,12 @@ rebuilds the Aggressive / Moderate / Conservative tables automatically.
 **Hosted (GitHub Pages):** https://brandonkurz.github.io/dfi-covered-calls/
 
 The hosted version reads data snapshots that a GitHub Action refreshes about every
-15 minutes during US market hours (plus GitHub Pages CDN caching, so expect quotes
-to lag by up to ~25 minutes). It covers the tickers in [tickers.json](tickers.json);
-to add one, edit that file on GitHub and either wait for the next scheduled run or
-trigger the "Update market data" workflow manually from the Actions tab.
+20 minutes during US market hours (plus deploy and CDN lag, so expect quotes to trail
+by up to ~30 minutes). It covers the ~200 large-cap names and index ETFs in
+[tickers.json](tickers.json). To add a ticker, edit that file on GitHub and either
+wait for the next scheduled run or trigger the "Update market data" workflow manually
+from the Actions tab; the site picks it up a few minutes later. Data is deployed as a
+Pages artifact, not committed, so the repo stays small.
 
 **Local (freshest data, any ticker):**
 

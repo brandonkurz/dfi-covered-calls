@@ -112,7 +112,7 @@ async function loadStatic(sym) {
   if (!r.ok) {
     let list = '';
     try { list = ' Current watchlist: ' + (await (await fetch('tickers.json?t=' + Date.now())).json()).join(', ') + '.'; } catch (_) {}
-    throw new Error(sym + ' is not in the hosted watchlist. Edit tickers.json in the GitHub repo to add it.' + list);
+    throw new Error(sym + ' is not in the hosted universe yet. Edit tickers.json in the GitHub repo to add it, then run the "Update market data" workflow from the Actions tab (or wait for the next scheduled refresh).' + list);
   }
   return r.json();
 }
@@ -127,7 +127,7 @@ function applyStatic(d) {
   state.calls = d.chains[state.selectedExp];
   state.quoteAtLoad = d.quote.price;
   $('stamp').textContent = 'Data as of ' + new Date(d.fetchedAt).toLocaleString() +
-    ' (auto-updates ~15 min during market hours)';
+    ' (auto-updates ~20 min during market hours)';
 }
 
 async function loadAll() {

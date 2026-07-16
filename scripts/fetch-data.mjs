@@ -8,7 +8,8 @@ import { fileURLToPath } from 'url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const UA = 'Mozilla/5.0';
-const MAX_DTE = 130; // cache chains this far out; covers auto-pick + overrides
+const MAX_DTE = 100; // cache chains this far out; covers auto-pick + overrides
+const CONCURRENCY = 4;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let cookie = '', crumb = '';
@@ -54,7 +55,7 @@ async function fetchSymbol(sym) {
 
   const chains = {};
   for (const exp of wanted) {
-    await sleep(400);
+    await sleep(150);
     const c = await getJson(`https://query1.finance.yahoo.com/v7/finance/options/${enc}?crumb=${encodeURIComponent(crumb)}&date=${exp}`);
     const calls = (c.optionChain.result[0].options[0] || {}).calls || [];
     chains[exp] = calls.map(x => ({ strike: x.strike, bid: x.bid || 0, ask: x.ask || 0,
@@ -63,21 +64,30 @@ async function fetchSymbol(sym) {
   return { symbol: sym, fetchedAt: new Date().toISOString(), quote, earnTs, divYield, chains };
 }
 
-const tickers = JSON.parse(readFileSync(join(ROOT, 'tickers.json'), 'utf8'));
+// Symbols from CLI args if given (node scripts/fetch-data.mjs MU AAPL), else tickers.json
+const tickers = process.argv.length > 2
+  ? process.argv.slice(2).map(s => s.toUpperCase())
+  : JSON.parse(readFileSync(join(ROOT, 'tickers.json'), 'utf8'));
 mkdirSync(join(ROOT, 'data'), { recursive: true });
 await handshake();
 
-let ok = 0;
-for (const sym of tickers) {
-  try {
-    const payload = await fetchSymbol(sym);
-    writeFileSync(join(ROOT, 'data', sym + '.json'), JSON.stringify(payload));
-    ok++;
-    console.log(`${sym}: ${Object.keys(payload.chains).length} expirations @ ${payload.quote.price}`);
-  } catch (e) {
-    console.log(`${sym}: FAILED - ${e.message} (keeping previous data if any)`);
+let ok = 0, failed = [];
+const queue = [...tickers];
+async function worker() {
+  while (queue.length) {
+    const sym = queue.shift();
+    try {
+      const payload = await fetchSymbol(sym);
+      writeFileSync(join(ROOT, 'data', sym + '.json'), JSON.stringify(payload));
+      ok++;
+      console.log(`${sym}: ${Object.keys(payload.chains).length} expirations @ ${payload.quote.price}`);
+    } catch (e) {
+      failed.push(sym);
+      console.log(`${sym}: FAILED - ${e.message} (keeping previous data if any)`);
+    }
+    await sleep(200);
   }
-  await sleep(600);
 }
-console.log(`Done: ${ok}/${tickers.length} tickers updated.`);
-if (ok === 0) process.exit(1);
+await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+console.log(`Done: ${ok}/${tickers.length} tickers updated.` + (failed.length ? ' Failed: ' + failed.join(', ') : ''));
+if (ok < tickers.length / 2) process.exit(1);
